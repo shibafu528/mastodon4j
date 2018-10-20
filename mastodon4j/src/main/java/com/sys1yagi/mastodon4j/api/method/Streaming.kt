@@ -4,261 +4,103 @@ import com.sys1yagi.mastodon4j.MastodonClient
 import com.sys1yagi.mastodon4j.Parameter
 import com.sys1yagi.mastodon4j.api.Dispatcher
 import com.sys1yagi.mastodon4j.api.Handler
+import com.sys1yagi.mastodon4j.api.Retryable
 import com.sys1yagi.mastodon4j.api.Shutdownable
-import com.sys1yagi.mastodon4j.api.entity.MastodonList
 import com.sys1yagi.mastodon4j.api.entity.Notification
 import com.sys1yagi.mastodon4j.api.entity.Status
 import com.sys1yagi.mastodon4j.api.exception.Mastodon4jRequestException
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
+import okhttp3.Response
+import java.io.BufferedReader
+import java.io.IOException
+import java.io.InterruptedIOException
 
 class Streaming(private val client: MastodonClient) {
+
     @Throws(Mastodon4jRequestException::class)
     fun federatedPublic(handler: Handler): Shutdownable {
-        val response = client.get("streaming/public")
-        if (response.isSuccessful) {
-            val reader = response.body().byteStream().bufferedReader()
-            val dispatcher = Dispatcher()
-            dispatcher.invokeLater(Runnable {
-                while (true) {
-                    try{
-                        val line = reader.readLine()
-                        if (line == null || line.isEmpty()) {
-                            continue
-                        }
-                        val type = line.split(":")[0].trim()
-                        if(type != "event"){
-                            continue
-                        }
-                        val event = line.split(":")[1].trim()
-                        val payload = reader.readLine()
-                        val payloadType = payload.split(":")[0].trim()
-                        if(payloadType != "data"){
-                            continue
-                        }
-                        if (event == "update") {
-                            val start = payload.indexOf(":") + 1
-                            val json = payload.substring(start).trim()
-                            val status = client.getSerializer().fromJson(
-                                    json,
-                                    Status::class.java
-                            )
-                            handler.onStatus(status)
-                        }
-                    }catch (e:java.io.InterruptedIOException){
-                        break
-                    }
+        return connect(
+                handler,
+                {
+                    client.get("streaming/public")
                 }
-                try {
-                    reader.close()
-                } catch (ignore: java.io.IOException) {}
-            })
-            return Shutdownable(dispatcher)
-        } else {
-            throw Mastodon4jRequestException(response)
-        }
+        )
     }
 
     @Throws(Mastodon4jRequestException::class)
     fun localPublic(handler: Handler): Shutdownable {
-        val response = client.get("streaming/public/local")
-        if (response.isSuccessful) {
-            val reader = response.body().byteStream().bufferedReader()
-            val dispatcher = Dispatcher()
-            dispatcher.invokeLater(Runnable {
-                while (true) {
-                    try{
-                        val line = reader.readLine()
-                        if (line == null || line.isEmpty()) {
-                            continue
-                        }
-                        val type = line.split(":")[0].trim()
-                        if(type != "event"){
-                            continue
-                        }
-                        val event = line.split(":")[1].trim()
-                        val payload = reader.readLine()
-                        val payloadType = payload.split(":")[0].trim()
-                        if(payloadType != "data"){
-                            continue
-                        }
-                        if (event == "update") {
-                            val start = payload.indexOf(":") + 1
-                            val json = payload.substring(start).trim()
-                            val status = client.getSerializer().fromJson(
-                                    json,
-                                    Status::class.java
-                            )
-                            handler.onStatus(status)
-                        }
-                    }catch (e:java.io.InterruptedIOException){
-                        break
-                    }
+        return connect(
+                handler,
+                {
+                    client.get("streaming/public/local")
                 }
-                try {
-                    reader.close()
-                } catch (ignore: java.io.IOException) {}
-            })
-            return Shutdownable(dispatcher)
-        } else {
-            throw Mastodon4jRequestException(response)
-        }
+        )
     }
 
     @Throws(Mastodon4jRequestException::class)
     fun federatedHashtag(tag: String, handler: Handler): Shutdownable {
-        val response = client.get(
-                "streaming/hashtag",
-                Parameter().append("tag", tag)
-        )
-        if (response.isSuccessful) {
-            val reader = response.body().byteStream().bufferedReader()
-            val dispatcher = Dispatcher()
-            dispatcher.invokeLater(Runnable {
-                while (true) {
-                    try{
-                        val line = reader.readLine()
-                        if (line == null || line.isEmpty()) {
-                            continue
-                        }
-                        val type = line.split(":")[0].trim()
-                        if(type != "event"){
-                            continue
-                        }
-                        val event = line.split(":")[1].trim()
-                        val payload = reader.readLine()
-                        val payloadType = payload.split(":")[0].trim()
-                        if(payloadType != "data"){
-                            continue
-                        }
-                        if (event == "update") {
-                            val start = payload.indexOf(":") + 1
-                            val json = payload.substring(start).trim()
-                            val status = client.getSerializer().fromJson(
-                                    json,
-                                    Status::class.java
-                            )
-                            handler.onStatus(status)
-                        }
-                    }catch (e:java.io.InterruptedIOException){
-                        break
-                    }
+        val parameter = Parameter().append("tag", tag)
+        return connect(
+                handler,
+                {
+                    client.get("streaming/hashtag", parameter)
                 }
-                try {
-                    reader.close()
-                } catch (ignore: java.io.IOException) {}
-            })
-            return Shutdownable(dispatcher)
-        } else {
-            throw Mastodon4jRequestException(response)
-        }
+        )
     }
 
     @Throws(Mastodon4jRequestException::class)
     fun localHashtag(tag: String, handler: Handler): Shutdownable {
-        val response = client.get(
-                "streaming/hashtag/local",
-                Parameter().append("tag", tag)
-        )
-        if (response.isSuccessful) {
-            val reader = response.body().byteStream().bufferedReader()
-            val dispatcher = Dispatcher()
-            dispatcher.invokeLater(Runnable {
-                while (true) {
-                    try{
-                        val line = reader.readLine()
-                        if (line == null || line.isEmpty()) {
-                            continue
-                        }
-                        val type = line.split(":")[0].trim()
-                        if(type != "event"){
-                            continue
-                        }
-                        val event = line.split(":")[1].trim()
-                        val payload = reader.readLine()
-                        val payloadType = payload.split(":")[0].trim()
-                        if(payloadType != "data"){
-                            continue
-                        }
-                        if (event == "update") {
-                            val start = payload.indexOf(":") + 1
-                            val json = payload.substring(start).trim()
-                            val status = client.getSerializer().fromJson(
-                                    json,
-                                    Status::class.java
-                            )
-                            handler.onStatus(status)
-                        }
-                    }catch (e:java.io.InterruptedIOException){
-                        break
-                    }
+        val parameter = Parameter().append("tag", tag)
+        return connect(
+                handler,
+                {
+                    client.get("streaming/hashtag/local", parameter)
                 }
-                try {
-                    reader.close()
-                } catch (ignore: java.io.IOException) {}
-            })
-            return Shutdownable(dispatcher)
-        } else {
-            throw Mastodon4jRequestException(response)
-        }
+        )
     }
 
     @Throws(Mastodon4jRequestException::class)
     fun user(handler: Handler): Shutdownable {
-        val response = client.get(
-                "streaming/user"
+        return connect(
+                handler,
+                {
+                    client.get("streaming/user")
+                }
         )
+    }
+
+    @Throws(Mastodon4jRequestException::class)
+    fun userList(handler: Handler, listID: String): Shutdownable {
+        val parameter = Parameter().apply {
+            append("list", listID)
+        }
+        return connect(
+                handler,
+                {
+                    client.get("streaming/list", parameter)
+                }
+        )
+    }
+
+    private fun connect(handler: Handler, executor: () -> Response, dispatcher: Dispatcher = Dispatcher()): Shutdownable {
+        val response = executor()
         if (response.isSuccessful) {
             val reader = response.body().byteStream().bufferedReader()
-            val dispatcher = Dispatcher()
             dispatcher.invokeLater(Runnable {
                 while (true) {
-                    try{
-                        val line = reader.readLine()
-                        if (line == null || line.isEmpty()) {
-                            continue
-                        }
-                        val type = line.split(":")[0].trim()
-                        if(type != "event"){
-                            continue
-                        }
-                        val event = line.split(":")[1].trim()
-                        val payload = reader.readLine()
-                        val payloadType = payload.split(":")[0].trim()
-                        if(payloadType != "data"){
-                            continue
-                        }
-
-                        val start = payload.indexOf(":") + 1
-                        val json = payload.substring(start).trim()
-                        if (event == "update") {
-                            val status = client.getSerializer().fromJson(
-                                    json,
-                                    Status::class.java
-                            )
-                            handler.onStatus(status)
-                        }
-                        if (event == "notification") {
-                            val notification = client.getSerializer().fromJson(
-                                    json,
-                                    Notification::class.java
-                            )
-                            handler.onNotification(notification)
-                        }
-                        if (event == "delete") {
-                            val id = client.getSerializer().fromJson(
-                                    json,
-                                    Long::class.java
-                            )
-                            handler.onDelete(id)
-                        }
-                    }catch (e:java.io.InterruptedIOException){
+                    try {
+                        receiveUser(reader, client, handler)
+                    } catch (e: InterruptedIOException) {
+                        break
+                    } catch (e: IOException) {
+                        handler.onDisconnected(retryable {
+                            connect(handler, executor, dispatcher)
+                        })
                         break
                     }
                 }
                 try {
                     reader.close()
-                } catch (ignore: java.io.IOException) {}
+                } catch (ignore: IOException) {}
             })
             return Shutdownable(dispatcher)
         } else {
@@ -266,67 +108,60 @@ class Streaming(private val client: MastodonClient) {
         }
     }
 
-    @Throws(Mastodon4jRequestException::class)
-    fun userList(handler: Handler, listID: String): Shutdownable {
-        val response = client.get(
-                "streaming/list",
-                Parameter().apply {
-                    append("list", listID)
-                }
-        )
-        if (response.isSuccessful) {
-            val reader = response.body().byteStream().bufferedReader()
-            val dispatcher = Dispatcher()
-            dispatcher.invokeLater(Runnable {
-                while (true) {
-                    try{
-                        val line = reader.readLine()
-                        if (line == null || line.isEmpty()) {
-                            continue
-                        }
-                        val type = line.split(":")[0].trim()
-                        if(type != "event"){
-                            continue
-                        }
-                        val event = line.split(":")[1].trim()
-                        val payload = reader.readLine()
-                        val payloadType = payload.split(":")[0].trim()
-                        if(payloadType != "data"){
-                            continue
-                        }
-
-                        val start = payload.indexOf(":") + 1
-                        val json = payload.substring(start).trim()
-                        if (event == "update") {
-                            val status = client.getSerializer().fromJson(
-                                    json,
-                                    Status::class.java
-                            )
-                            handler.onStatus(status)
-                        }
-                        if (event == "notification") {
-                            val notification = client.getSerializer().fromJson(
-                                    json,
-                                    Notification::class.java
-                            )
-                            handler.onNotification(notification)
-                        }
-                        if (event == "delete") {
-                            val id = client.getSerializer().fromJson(
-                                    json,
-                                    Long::class.java
-                            )
-                            handler.onDelete(id)
-                        }
-                    }catch (e:java.io.InterruptedIOException){
-                        break
-                    }
-                }
-                reader.close()
-            })
-            return Shutdownable(dispatcher)
-        } else {
-            throw Mastodon4jRequestException(response)
+    private fun retryable(proc: () -> Unit): Retryable {
+        return object : Retryable {
+            override fun retry() {
+                proc()
+            }
         }
+    }
+
+    private fun receiveUser(reader: BufferedReader, client: MastodonClient, handler: Handler) {
+        val (line, payload) = read(reader) ?: return
+        val payloadType = payload.split(":")[0].trim()
+        if (payloadType != "data") {
+            return
+        }
+        val event = line.split(":")[1].trim()
+        handleStatus(event, payload, client, handler::onStatus)
+                || handleNotification(event, payload, client, handler::onNotification)
+                || handleDelete(event, payload, client, handler::onDelete)
+    }
+
+    private fun read(reader: BufferedReader): Pair<String, String>? {
+        val line = reader.readLine()?.takeIf { it.isNotEmpty() } ?: return null
+        val type = line.split(":")[0].trim()
+        if (type != "event") {
+            return null
+        }
+        val payload = reader.readLine()
+        return Pair(line, payload)
+    }
+
+    private inline fun <reified T> handleAnything(event: String, payload: String, client: MastodonClient, expected: String, receiver: (T) -> Unit): Boolean {
+        return if (event == expected) {
+            val start = payload.indexOf(":") + 1
+            val json = payload.substring(start).trim()
+            val any = client.getSerializer().fromJson(
+                    json,
+                    T::class.java
+            )
+            receiver(any)
+            true
+        } else {
+            false
+        }
+    }
+
+    private inline fun handleStatus(event: String, payload: String, client: MastodonClient, receiver: (Status) -> Unit): Boolean {
+        return handleAnything<Status>(event, payload, client, "update", receiver)
+    }
+
+    private inline fun handleNotification(event: String, payload: String, client: MastodonClient, receiver: (Notification) -> Unit): Boolean {
+        return handleAnything<Notification>(event, payload, client, "notification", receiver)
+    }
+
+    private inline fun handleDelete(event: String, payload: String, client: MastodonClient, receiver: (Long) -> Unit): Boolean {
+        return handleAnything<Long>(event, payload, client, "delete", receiver)
     }
 }

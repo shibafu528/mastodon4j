@@ -3,15 +3,13 @@ package com.sys1yagi.mastodon4j.sample;
 import com.google.gson.Gson;
 import com.sys1yagi.mastodon4j.MastodonClient;
 import com.sys1yagi.mastodon4j.api.Handler;
+import com.sys1yagi.mastodon4j.api.Retryable;
 import com.sys1yagi.mastodon4j.api.Shutdownable;
 import com.sys1yagi.mastodon4j.api.entity.Notification;
 import com.sys1yagi.mastodon4j.api.entity.Status;
-import com.sys1yagi.mastodon4j.api.exception.Mastodon4jRequestException;
 import com.sys1yagi.mastodon4j.api.method.Streaming;
 import okhttp3.OkHttpClient;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.concurrent.TimeUnit;
 
 public class StreamPublicTimeline {
     public static void main(String[] args) {
@@ -34,6 +32,11 @@ public class StreamPublicTimeline {
 
             @Override
             public void onDelete(long id) {
+
+            }
+
+            @Override
+            public void onDisconnected(@NotNull Retryable retryable) {
 
             }
         };
