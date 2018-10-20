@@ -1,6 +1,7 @@
 package com.sys1yagi.mastodon4j.sample
 
 import com.sys1yagi.mastodon4j.api.Handler
+import com.sys1yagi.mastodon4j.api.Retryable
 import com.sys1yagi.mastodon4j.api.entity.Notification
 import com.sys1yagi.mastodon4j.api.entity.Status
 import com.sys1yagi.mastodon4j.api.exception.Mastodon4jRequestException
@@ -25,6 +26,10 @@ object StreamPublicTimeline {
             }
 
             override fun onDelete(id: Long) {
+
+            }
+
+            override fun onDisconnected(retryable: Retryable) {
 
             }
         }
