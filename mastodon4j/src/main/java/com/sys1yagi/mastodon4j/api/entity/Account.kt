@@ -16,5 +16,13 @@ class Account(
         @SerializedName("followers_count") val followersCount: Int = 0,
         @SerializedName("following_count") val followingCount: Int = 0,
         @SerializedName("statuses_count") val statusesCount: Int = 0,
-        @SerializedName("emojis") val emojis: List<Emoji> = emptyList()){
+        @SerializedName("emojis") val emojis: List<Emoji> = emptyList(),
+        @SerializedName("moved") val moved: Account? = null,
+        @SerializedName("fields") val fields: List<Field> = emptyList(),
+        @SerializedName("bot") val isBot: Boolean = false){
+    class Field(
+            @SerializedName("name") val name: String = "",
+            @SerializedName("value") val value: String = "",
+            @SerializedName("verified_at") val verifiedAt: String? = null
+    )
 }
