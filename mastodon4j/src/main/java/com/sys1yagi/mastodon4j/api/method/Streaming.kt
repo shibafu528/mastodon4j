@@ -101,6 +101,7 @@ class Streaming(private val client: MastodonClient) {
                 try {
                     reader.close()
                 } catch (ignore: IOException) {}
+                handler.onClose()
             })
             return Shutdownable(dispatcher)
         } else {

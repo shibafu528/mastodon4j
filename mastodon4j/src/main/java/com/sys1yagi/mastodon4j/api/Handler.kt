@@ -15,4 +15,6 @@ interface Handler {
     fun onDelete(id: Long)
 
     fun onDisconnected(retryable: Retryable)
+
+    fun onClose()
 }
