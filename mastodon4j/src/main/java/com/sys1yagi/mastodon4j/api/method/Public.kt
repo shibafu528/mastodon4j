@@ -8,10 +8,6 @@ import com.sys1yagi.mastodon4j.api.Range
 import com.sys1yagi.mastodon4j.api.entity.Instance
 import com.sys1yagi.mastodon4j.api.entity.Results
 import com.sys1yagi.mastodon4j.api.entity.Status
-import com.sys1yagi.mastodon4j.api.exception.Mastodon4jRequestException
-import com.sys1yagi.mastodon4j.extension.fromJson
-import com.sys1yagi.mastodon4j.extension.genericType
-import com.sys1yagi.mastodon4j.extension.toPageable
 
 class Public(private val client: MastodonClient) {
     /**
@@ -30,7 +26,7 @@ class Public(private val client: MastodonClient) {
     }
 
     /**
-     * GET /api/v1/search
+     * GET /api/v2/search
      * q: The search query
      * resolve: Whether to resolve non-local accounts
      * @see https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md#search
@@ -46,7 +42,8 @@ class Public(private val client: MastodonClient) {
                                 if (resolve) {
                                     append("resolve", resolve)
                                 }
-                            }
+                            },
+                            version = "v2"
                     )
                 },
                 {
